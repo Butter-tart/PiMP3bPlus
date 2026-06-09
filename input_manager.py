@@ -1,5 +1,10 @@
-import evdev
-from evdev import ecodes
+try:
+    import evdev
+    from evdev import ecodes
+    HAS_EVDEV = True
+except ImportError:
+    HAS_EVDEV = False
+
 import config
 import threading
 import logging
@@ -7,17 +12,24 @@ import logging
 class InputManager:
     def __init__(self, device_name="8BitDo Zero 2 gamepad"):
         self.device_name = device_name
-        self.device = self._find_device()
+        self.device = self._find_device() if HAS_EVDEV else None
         self.callbacks = {}
         self.running = False
         self._thread = None
+        
+        if not HAS_EVDEV:
+            logging.warning("evdev module not found. Gamepad input will not work.")
 
     def _find_device(self):
-        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-        for device in devices:
-            if self.device_name in device.name:
-                logging.info(f"Found gamepad: {device.name} at {device.path}")
-                return device
+        try:
+            devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+            for device in devices:
+                if self.device_name in device.name:
+                    logging.info(f"Found gamepad: {device.name} at {device.path}")
+                    return device
+        except Exception as e:
+            logging.error(f"Error listing input devices: {e}")
+            
         logging.warning(f"Gamepad '{self.device_name}' not found.")
         return None
 
@@ -36,6 +48,9 @@ class InputManager:
             self._thread.join()
 
     def _run(self):
+        if not HAS_EVDEV or not self.device:
+            return
+            
         try:
             for event in self.device.read_loop():
                 if not self.running:

@@ -29,6 +29,7 @@ sudo raspi-config
 sudo apt-get update
 sudo apt-get install python3-pip python3-pil python3-pygame python3-evdev
 ```
+*Note: Using `apt-get` to install `python3-evdev` is recommended on Raspberry Pi OS as it provides the necessary binary, avoiding compilation issues.*
 
 ### 3. Setup Gamepad
 Pair your 8BitDo Zero 2 in **Android Mode** (Hold `B + START` to turn on, then `SELECT` for 3s to pair).
