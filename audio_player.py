@@ -35,6 +35,34 @@ class AudioPlayer:
         pygame.mixer.music.stop()
         self.current_song = None
 
+    def next_song(self):
+        music_list = self.get_music_list()
+        if not music_list:
+            return
+        
+        if self.current_song in music_list:
+            idx = music_list.index(self.current_song)
+            next_idx = (idx + 1) % len(music_list)
+        else:
+            next_idx = 0
+            
+        self.load_music(os.path.join(config.MUSIC_DIR, music_list[next_idx]))
+        self.play()
+
+    def prev_song(self):
+        music_list = self.get_music_list()
+        if not music_list:
+            return
+        
+        if self.current_song in music_list:
+            idx = music_list.index(self.current_song)
+            prev_idx = (idx - 1) % len(music_list)
+        else:
+            prev_idx = 0
+            
+        self.load_music(os.path.join(config.MUSIC_DIR, music_list[prev_idx]))
+        self.play()
+
     def set_volume(self, volume):
         self.volume = max(0.0, min(1.0, volume))
         pygame.mixer.music.set_volume(self.volume)

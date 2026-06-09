@@ -15,6 +15,8 @@ class DisplayManager:
     def __init__(self):
         self.width = config.EPD_WIDTH
         self.height = config.EPD_HEIGHT
+        self.partial_refresh_count = 0
+        self.max_partial_refreshes = 20
         
         if HAS_EPD:
             self.epd = epd2in13_V4.EPD()
@@ -54,11 +56,13 @@ class DisplayManager:
         # The e-ink display is usually landscape in our config (250x122)
         # Some waveshare displays require rotation depending on how they are mounted
         if HAS_EPD:
-            if partial:
+            if partial and self.partial_refresh_count < self.max_partial_refreshes:
                 # V4 supports partial refresh
                 self.epd.displayPartial(self.epd.getbuffer(self.image))
+                self.partial_refresh_count += 1
             else:
                 self.epd.display(self.epd.getbuffer(self.image))
+                self.partial_refresh_count = 0
         else:
             # In simulation, maybe save to a file or just log
             # self.image.save("display_output.png")

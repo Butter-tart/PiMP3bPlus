@@ -25,6 +25,8 @@ class PiMP3bPlus:
         # Button Mappings
         self.input.set_callback(config.BUTTON_A, lambda: self.ui.handle_input("A"))
         self.input.set_callback(config.BUTTON_B, lambda: self.ui.handle_input("B"))
+        self.input.set_callback(config.BUTTON_SELECT, lambda: self.ui.handle_input("SELECT"))
+        self.input.set_callback(config.BUTTON_START, lambda: self.ui.handle_input("START"))
         
         # D-Pad Mappings
         def handle_hat_x(value):
