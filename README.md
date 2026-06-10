@@ -36,7 +36,9 @@ Pair your 8BitDo Zero 2 in **Android Mode** (Hold `B + START` to turn on, then `
 Verify the device appears in `/dev/input/`.
 
 ### 4. Hardware Driver
-The project includes a robust driver in `lib/` that works with the Waveshare 2.13inch V4 e-Paper. It requires `RPi.GPIO` and `spidev` to be installed (see Step 2). If these are missing, the application will automatically fall back to a simulation mode.
+The project includes the official Waveshare driver in `lib/` (specifically for the 2.13inch V4 e-Paper). It requires `RPi.GPIO` and `spidev` to be installed (see Step 2). If these are missing, the application will automatically fall back to a simulation mode. 
+
+**Note on V4 Partial Refresh**: The V4 display supports fast partial refreshes. The application is configured to perform a full refresh every 20 cycles to maintain screen quality and clear any ghosting.
 
 ### 5. Add Music
 Place your `.mp3` or `.wav` files in the `music/` directory.

@@ -1,12 +1,16 @@
 import logging
+import sys
+import os
 from PIL import Image, ImageDraw, ImageFont
 import config
 
+# Add lib to path so we can find epdconfig and epd2in13_V4
+sys.path.append(os.path.join(config.PROJECT_ROOT, 'lib'))
+
 try:
     # Attempt to import the Waveshare library
-    # In a real Pi environment, these would be installed
-    from lib import epd2in13_V4
-    from lib import epdconfig
+    import epd2in13_V4
+    import epdconfig
     HAS_EPD = True
 except ImportError as e:
     logging.warning(f"Waveshare library components missing: {e}. Running in simulation mode.")
@@ -61,19 +65,26 @@ class DisplayManager:
     def display(self, partial=False):
         # The e-ink display is usually landscape in our config (250x122)
         # Some waveshare displays require rotation depending on how they are mounted
-        if HAS_EPD:
-            if partial and self.partial_refresh_count < self.max_partial_refreshes:
-                # V4 supports partial refresh
-                self.epd.displayPartial(self.epd.getbuffer(self.image))
-                self.partial_refresh_count += 1
-            else:
-                self.epd.display(self.epd.getbuffer(self.image))
-                self.partial_refresh_count = 0
+        if HAS_EPD and self.epd is not None:
+            try:
+                # For V4, partial refresh is more complex.
+                # We need to ensure we don't exceed max partial refreshes
+                if partial and self.partial_refresh_count < self.max_partial_refreshes:
+                    self.epd.displayPartial(self.epd.getbuffer(self.image))
+                    self.partial_refresh_count += 1
+                else:
+                    self.epd.display(self.epd.getbuffer(self.image))
+                    self.partial_refresh_count = 0
+            except Exception as e:
+                logging.error(f"Display update failed: {e}")
+                # Try to re-init on error?
         else:
-            # In simulation, maybe save to a file or just log
-            # self.image.save("display_output.png")
+            # In simulation mode, we can log or save image
             pass
 
     def sleep(self):
-        if HAS_EPD:
-            self.epd.sleep()
+        if HAS_EPD and self.epd is not None:
+            try:
+                self.epd.sleep()
+            except Exception as e:
+                logging.error(f"Display sleep failed: {e}")

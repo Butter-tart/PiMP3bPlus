@@ -13,10 +13,10 @@ FONTS_DIR = os.path.join(ASSETS_DIR, 'fonts')
 MUSIC_DIR = os.path.join(PROJECT_ROOT, 'music')
 
 # Default Font (may need to be adjusted based on system availability)
-DEFAULT_FONT = os.path.join(FONTS_DIR, 'Roboto-Medium.ttf')
+DEFAULT_FONT = os.path.join(FONTS_DIR, 'PixelOperator.ttf')
 FONT_SIZE_SMALL = 12
 FONT_SIZE_MEDIUM = 16
-FONT_SIZE_LARGE = 20
+FONT_SIZE_LARGE = 24
 
 # Gamepad Mapping (Default for 8BitDo Zero 2 in Android Mode)
 # These might need adjustment based on evdev.evtest output
