@@ -27,16 +27,16 @@ sudo raspi-config
 ### 2. Install Dependencies
 ```bash
 sudo apt-get update
-sudo apt-get install python3-pip python3-pil python3-pygame python3-evdev
+sudo apt-get install python3-pip python3-pil python3-pygame python3-evdev python3-rpi.gpio python3-spidev
 ```
-*Note: Using `apt-get` to install `python3-evdev` is recommended on Raspberry Pi OS as it provides the necessary binary, avoiding compilation issues.*
+*Note: Using `apt-get` to install dependencies is recommended on Raspberry Pi OS to avoid compilation issues.*
 
 ### 3. Setup Gamepad
 Pair your 8BitDo Zero 2 in **Android Mode** (Hold `B + START` to turn on, then `SELECT` for 3s to pair).
 Verify the device appears in `/dev/input/`.
 
-### 4. Install Waveshare Library
-The project includes a mock for development, but for the real hardware, you should install the official Waveshare e-Paper library or place the `epd2in13_V4.py` and `epdconfig.py` in the `lib/` directory.
+### 4. Hardware Driver
+The project includes a robust driver in `lib/` that works with the Waveshare 2.13inch V4 e-Paper. It requires `RPi.GPIO` and `spidev` to be installed (see Step 2). If these are missing, the application will automatically fall back to a simulation mode.
 
 ### 5. Add Music
 Place your `.mp3` or `.wav` files in the `music/` directory.

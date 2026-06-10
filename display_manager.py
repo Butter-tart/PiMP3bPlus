@@ -6,9 +6,10 @@ try:
     # Attempt to import the Waveshare library
     # In a real Pi environment, these would be installed
     from lib import epd2in13_V4
+    from lib import epdconfig
     HAS_EPD = True
-except ImportError:
-    logging.warning("Waveshare library not found. Running in simulation mode.")
+except ImportError as e:
+    logging.warning(f"Waveshare library components missing: {e}. Running in simulation mode.")
     HAS_EPD = False
 
 class DisplayManager:
@@ -18,13 +19,18 @@ class DisplayManager:
         self.partial_refresh_count = 0
         self.max_partial_refreshes = 20
         
+        self.epd = None
         if HAS_EPD:
-            self.epd = epd2in13_V4.EPD()
-            self.epd.init()
-            self.epd.Clear(0xFF)
-        else:
-            self.epd = None
-            
+            try:
+                self.epd = epd2in13_V4.EPD()
+                self.epd.init()
+                self.epd.Clear(0xFF)
+                logging.info("e-Ink display initialized successfully.")
+            except Exception as e:
+                logging.error(f"Failed to initialize e-Ink display hardware: {e}")
+                logging.warning("Falling back to simulation mode.")
+                self.epd = None
+        
         self.image = Image.new('1', (self.width, self.height), 255)  # 255: clear the frame
         self.draw = ImageDraw.Draw(self.image)
         
