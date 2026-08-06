@@ -42,6 +42,15 @@ class RaspberryPi:
         if self.SPI:
             self.SPI.writebytes(data)
 
+    def spi_writebyte2(self, data):
+        if not self.SPI:
+            return
+        # Waveshare drivers use spi_writebyte2 for larger buffers.
+        if hasattr(self.SPI, "writebytes2"):
+            self.SPI.writebytes2(data)
+        else:
+            self.SPI.writebytes(list(data))
+
     def module_init(self):
         if not self.GPIO or not self.SPI:
             raise RuntimeError("RPi.GPIO or spidev not found. Cannot initialize hardware SPI.")
@@ -86,6 +95,6 @@ implementation = RaspberryPi()
 
 for name in [
     'RST_PIN', 'DC_PIN', 'CS_PIN', 'BUSY_PIN',
-    'digital_write', 'digital_read', 'delay_ms', 'spi_writebyte', 'module_init', 'module_exit'
+    'digital_write', 'digital_read', 'delay_ms', 'spi_writebyte', 'spi_writebyte2', 'module_init', 'module_exit'
 ]:
     setattr(sys.modules[__name__], name, getattr(implementation, name))
