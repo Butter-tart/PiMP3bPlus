@@ -1,19 +1,52 @@
 import logging
 import sys
 import os
+import importlib.util
 from PIL import Image, ImageDraw, ImageFont
 import config
 
-# Add lib to path so we can find epdconfig and epd2in13_V4
-sys.path.append(os.path.join(config.PROJECT_ROOT, 'lib'))
+LIB_DIR = os.path.join(config.PROJECT_ROOT, 'lib')
+EPD_IMPORT_ERROR = None
+HAS_EPD = False
+epd2in13_V4 = None
+epdconfig = None
+
+
+def _load_module_from_path(module_name, module_path):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not create spec for {module_name} at {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[module_name] = module
+    return module
+
+
+def _load_waveshare_modules():
+    epdconfig_path = os.path.join(LIB_DIR, "epdconfig.py")
+    epd_driver_path = os.path.join(LIB_DIR, "epd2in13_V4.py")
+
+    if not os.path.exists(epdconfig_path):
+        raise ImportError(f"Missing driver file: {epdconfig_path}")
+    if not os.path.exists(epd_driver_path):
+        raise ImportError(f"Missing driver file: {epd_driver_path}")
+
+    # Ensure local driver directory can resolve sibling imports if needed.
+    if LIB_DIR not in sys.path:
+        sys.path.insert(0, LIB_DIR)
+
+    logging.info(f"Loading e-Ink drivers from: {LIB_DIR}")
+    loaded_epdconfig = _load_module_from_path("epdconfig", epdconfig_path)
+    loaded_epd2 = _load_module_from_path("epd2in13_V4", epd_driver_path)
+    return loaded_epd2, loaded_epdconfig
+
 
 try:
-    # Attempt to import the Waveshare library
-    import epd2in13_V4
-    import epdconfig
+    epd2in13_V4, epdconfig = _load_waveshare_modules()
     HAS_EPD = True
-except ImportError as e:
-    logging.warning(f"Waveshare library components missing: {e}. Running in simulation mode.")
+except Exception as e:
+    EPD_IMPORT_ERROR = str(e)
+    logging.warning(f"Waveshare library import failed: {e}. Running in simulation mode.")
     HAS_EPD = False
 
 class DisplayManager:
@@ -22,6 +55,7 @@ class DisplayManager:
         self.height = config.EPD_HEIGHT
         self.partial_refresh_count = 0
         self.max_partial_refreshes = 20
+        self.simulation_reason = None
         
         self.epd = None
         if HAS_EPD:
@@ -31,9 +65,16 @@ class DisplayManager:
                 self.epd.Clear(0xFF)
                 logging.info("e-Ink display initialized successfully.")
             except Exception as e:
+                self.simulation_reason = str(e)
                 logging.error(f"Failed to initialize e-Ink display hardware: {e}")
+                logging.error(
+                    "Common causes: missing RPi.GPIO/spidev packages, SPI disabled, "
+                    "or running outside Raspberry Pi hardware."
+                )
                 logging.warning("Falling back to simulation mode.")
                 self.epd = None
+        else:
+            self.simulation_reason = EPD_IMPORT_ERROR
         
         self.image = Image.new('1', (self.width, self.height), 255)  # 255: clear the frame
         self.draw = ImageDraw.Draw(self.image)
@@ -88,3 +129,6 @@ class DisplayManager:
                 self.epd.sleep()
             except Exception as e:
                 logging.error(f"Display sleep failed: {e}")
+
+    def is_hardware_active(self):
+        return HAS_EPD and self.epd is not None

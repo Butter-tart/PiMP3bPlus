@@ -37,15 +37,18 @@ class InputManager:
         self.callbacks[event_code] = callback
 
     def start(self):
-        if self.device:
-            self.running = True
-            self._thread = threading.Thread(target=self._run, daemon=True)
-            self._thread.start()
+        if not self.device:
+            return False
+
+        self.running = True
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return True
 
     def stop(self):
         self.running = False
         if self._thread:
-            self._thread.join()
+            self._thread.join(timeout=1.0)
 
     def _run(self):
         if not HAS_EVDEV or not self.device:

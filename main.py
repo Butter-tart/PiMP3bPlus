@@ -1,7 +1,6 @@
 import time
 import logging
 import signal
-import sys
 import config
 from display_manager import DisplayManager
 from input_manager import InputManager
@@ -15,11 +14,12 @@ class PiMP3bPlus:
     def __init__(self):
         self.display = DisplayManager()
         self.audio = AudioPlayer()
-        self.ui = UIManager(self.display, self.audio)
+        self.ui = UIManager(self.display, self.audio, exit_callback=self.stop)
         self.input = InputManager()
         
         self.setup_inputs()
         self.running = True
+        self._stopping = False
 
     def setup_inputs(self):
         # Button Mappings
@@ -46,23 +46,34 @@ class PiMP3bPlus:
 
     def start(self):
         logging.info("Starting PiMP3bPlus...")
-        self.input.start()
+        input_started = self.input.start()
+        if not input_started:
+            logging.warning("Input device not active. Connect the gamepad to enable controls.")
+
+        if not self.audio.available:
+            logging.warning("Audio is unavailable. Check your output device and ALSA/Pulse configuration.")
+
         self.ui.draw() # Initial draw
         
         try:
             while self.running:
-                # Main loop could handle things like screen sleep or updates
-                time.sleep(1)
+                if self.audio.poll_song_finished():
+                    self.ui.handle_song_finished()
+                time.sleep(0.1)
         except KeyboardInterrupt:
             self.stop()
 
     def stop(self):
+        if self._stopping:
+            return
+        self._stopping = True
+
         logging.info("Stopping PiMP3bPlus...")
         self.running = False
         self.input.stop()
         self.audio.stop()
         self.display.sleep()
-        sys.exit(0)
+        logging.info("PiMP3bPlus stopped.")
 
 if __name__ == "__main__":
     player = PiMP3bPlus()

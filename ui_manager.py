@@ -1,9 +1,11 @@
 import config
+import os
 
 class UIManager:
-    def __init__(self, display_manager, audio_player):
+    def __init__(self, display_manager, audio_player, exit_callback=None):
         self.display = display_manager
         self.audio = audio_player
+        self.exit_callback = exit_callback
         self.state = config.STATE_MENU
         self.menu_items = ["Play Music", "Settings", "Exit"]
         self.current_menu_index = 0
@@ -66,6 +68,8 @@ class UIManager:
         state_text = "Paused" if status["paused"] else "Playing"
         self.display.draw_text(10, 70, f"Status: {state_text}")
         self.display.draw_text(10, 90, f"Volume: {int(status['volume'] * 100)}%")
+        if not status.get("audio_available", True):
+            self.display.draw_text(140, 90, "Audio OFF", font_size="small")
 
     def _draw_settings(self):
         self.display.draw_text(10, 5, "Settings", font_size="large")
@@ -92,7 +96,10 @@ class UIManager:
                     limit = 1
             else:
                 limit = len(self.menu_items)
-            self.current_menu_index = min(limit - 1, self.current_menu_index + 1)
+            if limit > 0:
+                self.current_menu_index = min(limit - 1, self.current_menu_index + 1)
+            else:
+                self.current_menu_index = 0
         elif action == "LEFT":
             if self.state == config.STATE_PLAYING:
                 self.audio.prev_song()
@@ -139,12 +146,11 @@ class UIManager:
                     self.current_menu_index = 0
                     self.draw(full_refresh=True)
                 elif self.current_menu_index == 2: # Exit
-                    import sys
-                    sys.exit(0)
+                    if self.exit_callback:
+                        self.exit_callback()
             elif self.sub_menu_type == "MUSIC_LIST":
-                if self.music_list:
+                if self.music_list and self.current_menu_index < len(self.music_list):
                     song = self.music_list[self.current_menu_index]
-                    import os
                     if self.audio.load_music(os.path.join(config.MUSIC_DIR, song)):
                         self.audio.play()
                         self.state = config.STATE_PLAYING
@@ -169,3 +175,8 @@ class UIManager:
             self.sub_menu_type = None
             self.current_menu_index = 0
             self.draw(full_refresh=True)
+
+    def handle_song_finished(self):
+        if self.state == config.STATE_PLAYING:
+            self.audio.next_song()
+            self.draw()

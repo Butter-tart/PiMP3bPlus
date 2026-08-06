@@ -1,12 +1,15 @@
 import logging
 import sys
 import os
+import config
 
 # Configure logging to see the output clearly
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 def check_hardware():
     print("--- PiMP3bPlus Hardware Diagnostic ---")
+    project_root = config.PROJECT_ROOT
+    print(f"Project root: {project_root}")
     
     # 1. Check for libraries
     print("\n1. Checking Python Libraries:")
@@ -37,7 +40,10 @@ def check_hardware():
 
     # 3. Check for Project Files
     print("\n3. Checking Project Driver Files:")
-    files = ["lib/epd2in13_V4.py", "lib/epdconfig.py"]
+    files = [
+        os.path.join(project_root, "lib", "epd2in13_V4.py"),
+        os.path.join(project_root, "lib", "epdconfig.py")
+    ]
     for f in files:
         if os.path.exists(f):
             print(f" [OK] {f} found.")
@@ -46,14 +52,18 @@ def check_hardware():
 
     # 4. Attempt Display Initialization
     print("\n4. Attempting e-Ink Display Initialization:")
-    sys.path.append(os.getcwd())
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
     try:
         from display_manager import DisplayManager
         dm = DisplayManager()
-        if dm.epd is not None:
+        if dm.is_hardware_active():
             print(" [SUCCESS] Display hardware initialized correctly!")
         else:
-            print(" [INFO] DisplayManager is running in SIMULATION mode (no hardware detected).")
+            print(" [INFO] DisplayManager is running in SIMULATION mode.")
+            if getattr(dm, "simulation_reason", None):
+                print(f" [DETAIL] Reason: {dm.simulation_reason}")
+            print(" [HINT] Ensure python3-rpi.gpio and python3-spidev are installed and SPI is enabled.")
     except Exception as e:
         print(f" [ERROR] Initialization failed: {e}")
 
