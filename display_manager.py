@@ -17,8 +17,9 @@ def _load_module_from_path(module_name, module_path):
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not create spec for {module_name} at {module_path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Register before execution so module code can access sys.modules[__name__].
     sys.modules[module_name] = module
+    spec.loader.exec_module(module)
     return module
 
 
