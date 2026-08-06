@@ -17,6 +17,20 @@ A portable MP3 player built with Raspberry Pi 3B+, Waveshare 2.13-inch e-Ink V4 
 
 ## Software Setup
 
+### Quick Bring-Up (Recommended on Raspberry Pi)
+Run this from the project folder on the Pi:
+```bash
+chmod +x pi_setup.sh
+./pi_setup.sh
+```
+This script installs required packages, enables SPI, checks `/dev/spidev*`, and runs a real e-Ink draw test.
+
+If SPI was just enabled, reboot once and run:
+```bash
+python3 check_hardware.py --draw-test
+python3 main.py
+```
+
 ### 1. Enable SPI
 The e-Ink display requires SPI. Enable it via `raspi-config`:
 ```bash
@@ -38,6 +52,11 @@ Verify the device appears in `/dev/input/`.
 ### 4. Hardware Driver
 The project includes the official Waveshare driver in `lib/` (specifically for the 2.13inch V4 e-Paper). It requires `RPi.GPIO` and `spidev` to be installed (see Step 2). If these are missing, the application will automatically fall back to a simulation mode. 
 
+To validate hardware link, run:
+```bash
+python3 check_hardware.py --draw-test
+```
+
 **Note on V4 Partial Refresh**: The V4 display supports fast partial refreshes. The application is configured to perform a full refresh every 20 cycles to maintain screen quality and clear any ghosting.
 
 ### 5. Add Music
@@ -54,3 +73,32 @@ python3 main.py
 - **D-Pad Left/Right**: Adjust volume.
 - **A Button**: Select / Play / Pause.
 - **B Button**: Back.
+
+## Troubleshooting
+
+### e-Ink falls back to simulation mode
+1. Confirm SPI node exists:
+```bash
+ls -l /dev/spidev*
+```
+2. Confirm Python modules are installed:
+```bash
+python3 -c "import RPi.GPIO, spidev; print('ok')"
+```
+3. Run diagnostic for exact reason:
+```bash
+python3 check_hardware.py --draw-test
+```
+
+If `/dev/spidev0.0` is missing, enable SPI in `raspi-config` and reboot.
+
+### Gamepad not found
+1. Ensure controller is paired in Android mode.
+2. Install evdev:
+```bash
+sudo apt-get install -y python3-evdev
+```
+3. Verify input devices:
+```bash
+ls /dev/input/event*
+```

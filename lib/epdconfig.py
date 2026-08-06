@@ -45,6 +45,12 @@ class RaspberryPi:
     def module_init(self):
         if not self.GPIO or not self.SPI:
             raise RuntimeError("RPi.GPIO or spidev not found. Cannot initialize hardware SPI.")
+
+        spi_device = "/dev/spidev0.0"
+        if not os.path.exists(spi_device):
+            raise FileNotFoundError(
+                f"SPI device {spi_device} not found. Enable SPI in raspi-config and reboot."
+            )
         
         self.GPIO.setmode(self.GPIO.BCM)
         self.GPIO.setwarnings(False)
@@ -54,7 +60,13 @@ class RaspberryPi:
         self.GPIO.setup(self.BUSY_PIN, self.GPIO.IN)
 
         # SPI device, bus = 0, device = 0
-        self.SPI.open(0, 0)
+        try:
+            self.SPI.open(0, 0)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Failed to open SPI bus 0 device 0 ({spi_device}). "
+                "Enable SPI and verify wiring/HAT connection."
+            ) from e
         self.SPI.max_speed_hz = 4000000
         self.SPI.mode = 0b00
         return 0

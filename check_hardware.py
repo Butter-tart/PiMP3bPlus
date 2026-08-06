@@ -1,12 +1,14 @@
 import logging
 import sys
 import os
+import argparse
+import time
 import config
 
 # Configure logging to see the output clearly
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-def check_hardware():
+def check_hardware(draw_test=False):
     print("--- PiMP3bPlus Hardware Diagnostic ---")
     project_root = config.PROJECT_ROOT
     print(f"Project root: {project_root}")
@@ -59,6 +61,21 @@ def check_hardware():
         dm = DisplayManager()
         if dm.is_hardware_active():
             print(" [SUCCESS] Display hardware initialized correctly!")
+            if draw_test:
+                print("\n5. Running e-Ink draw test:")
+                try:
+                    dm.clear()
+                    dm.draw_text(10, 10, "PiMP3bPlus")
+                    dm.draw_text(10, 35, "e-Ink link test")
+                    dm.draw_text(10, 60, "If you can read this,")
+                    dm.draw_text(10, 85, "display path is working")
+                    dm.display(partial=False)
+                    print(" [SUCCESS] Draw test sent to panel.")
+                    print(" [INFO] Waiting 2s before sleep...")
+                    time.sleep(2)
+                    dm.sleep()
+                except Exception as e:
+                    print(f" [ERROR] Draw test failed: {e}")
         else:
             print(" [INFO] DisplayManager is running in SIMULATION mode.")
             if getattr(dm, "simulation_reason", None):
@@ -70,4 +87,12 @@ def check_hardware():
     print("\n---------------------------------------")
 
 if __name__ == "__main__":
-    check_hardware()
+    parser = argparse.ArgumentParser(description="PiMP3bPlus hardware diagnostic")
+    parser.add_argument(
+        "--draw-test",
+        action="store_true",
+        help="Attempt a real draw to the e-Ink panel after successful initialization"
+    )
+    args = parser.parse_args()
+
+    check_hardware(draw_test=args.draw_test)
