@@ -6,7 +6,8 @@ A portable MP3 player built with Raspberry Pi 3B+, Waveshare 2.13-inch e-Ink V4 
 - MP3/WAV Playback.
 - e-Ink display with 'Now Playing' screen.
 - Gamepad navigation (8BitDo Zero 2).
-- Settings menu and customizable volume.
+- Shuffle + repeat playback options.
+- Persistent settings (volume, shuffle, repeat, audio out, last song).
 
 ## Hardware Requirements
 - Raspberry Pi 3B+ (or similar).
@@ -68,11 +69,54 @@ Run the main application:
 python3 main.py
 ```
 
+On startup, the player preloads your last played song (without auto-playing), and restores your saved settings.
+It also starts a built-in web control server on port `8080` by default.
+
+## Mobile Web Remote
+When PiMP3bPlus is running, open this URL on your phone (same Wi-Fi network):
+```bash
+http://<raspberry-pi-ip>:8080
+```
+
+The page includes playback controls, volume, shuffle/repeat toggles, and song selection.
+
+To find the Pi IP address:
+```bash
+hostname -I
+```
+
 ### Controls
 - **D-Pad Up/Down**: Navigate menus.
-- **D-Pad Left/Right**: Adjust volume.
+- **D-Pad Left/Right**: Adjust volume in menus. In Now Playing, left=previous and right=next (or random next when Shuffle is ON).
 - **A Button**: Select / Play / Pause.
 - **B Button**: Back.
+
+## Service Auto-Start On Boot
+Install as a systemd service on Raspberry Pi:
+```bash
+chmod +x install_service.sh
+./install_service.sh
+```
+
+Useful service commands:
+```bash
+sudo systemctl status pimp3bplus.service
+sudo journalctl -u pimp3bplus.service -f
+sudo systemctl restart pimp3bplus.service
+```
+
+After boot, the web remote is available automatically while the service is running.
+
+## Smoke Test Command
+Run a quick end-to-end health check (display + audio):
+```bash
+python3 smoke_test.py
+```
+
+If you want to skip the brief audio playback probe:
+```bash
+python3 smoke_test.py --skip-audio-play
+```
 
 ## Troubleshooting
 
@@ -101,4 +145,11 @@ sudo apt-get install -y python3-evdev
 3. Verify input devices:
 ```bash
 ls /dev/input/event*
+```
+
+### Reset saved settings
+If needed, remove the settings file and restart:
+```bash
+rm -f settings.json
+python3 main.py
 ```

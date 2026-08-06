@@ -2,9 +2,10 @@ import config
 import os
 
 class UIManager:
-    def __init__(self, display_manager, audio_player, exit_callback=None):
+    def __init__(self, display_manager, audio_player, settings_manager=None, exit_callback=None):
         self.display = display_manager
         self.audio = audio_player
+        self.settings_manager = settings_manager
         self.exit_callback = exit_callback
         self.state = config.STATE_MENU
         self.menu_items = ["Play Music", "Settings", "Exit"]
@@ -19,7 +20,50 @@ class UIManager:
             "Repeat": False,
             "Audio Out": "3.5mm Jack"
         }
+        if self.settings_manager is not None:
+            self.settings["Shuffle"] = self.settings_manager.get("shuffle", False)
+            self.settings["Repeat"] = self.settings_manager.get("repeat", False)
+            self.settings["Audio Out"] = self.settings_manager.get("audio_out", "3.5mm Jack")
+
         self.settings_keys = list(self.settings.keys())
+
+    def _persist_settings(self):
+        if self.settings_manager is None:
+            return
+        self.settings_manager.update(
+            {
+                "shuffle": self.settings["Shuffle"],
+                "repeat": self.settings["Repeat"],
+                "audio_out": self.settings["Audio Out"],
+                "volume": self.audio.volume,
+                "last_song": self.audio.current_song,
+            },
+            save=True,
+        )
+
+    def persist_runtime_state(self):
+        self._persist_settings()
+
+    def set_setting(self, key, value):
+        if key not in self.settings:
+            return False
+        self.settings[key] = value
+        self._persist_settings()
+        self.draw()
+        return True
+
+    def play_song_by_name(self, song_name):
+        if not song_name:
+            return False
+        self.update_music_list()
+        if song_name not in self.music_list:
+            return False
+        if self.audio.play_song(song_name):
+            self.state = config.STATE_PLAYING
+            self._persist_settings()
+            self.draw(full_refresh=True)
+            return True
+        return False
 
     def update_music_list(self):
         self.music_list = self.audio.get_music_list()
@@ -60,6 +104,10 @@ class UIManager:
             self.display.draw_text(10, 35 + ((i - start_index) * 20), f"{prefix}{song_name}")
 
     def _draw_now_playing(self):
+        def format_mmss(total_seconds):
+            total_seconds = max(0, int(total_seconds))
+            return f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
+
         status = self.audio.get_status()
         self.display.draw_text(10, 5, "Now Playing", font_size="large")
         song_name = status["song"] if status["song"] else "None"
@@ -67,7 +115,20 @@ class UIManager:
         
         state_text = "Paused" if status["paused"] else "Playing"
         self.display.draw_text(10, 70, f"Status: {state_text}")
-        self.display.draw_text(10, 90, f"Volume: {int(status['volume'] * 100)}%")
+        self.display.draw_text(10, 90, f"Volume: {int(status['volume'] * 100)}%", font_size="small")
+
+        pos = status.get("position_s", 0)
+        length = status.get("length_s", 0)
+        if length > 0:
+            self.display.draw_text(95, 90, f"{format_mmss(pos)}/{format_mmss(length)}", font_size="small")
+
+            bar_x, bar_y, bar_w, bar_h = 10, 108, 220, 8
+            self.display.draw.rectangle((bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), outline=0, fill=255)
+            progress = min(1.0, max(0.0, pos / max(1, length)))
+            fill_w = int(bar_w * progress)
+            if fill_w > 0:
+                self.display.draw.rectangle((bar_x + 1, bar_y + 1, bar_x + fill_w - 1, bar_y + bar_h - 1), fill=0)
+
         if not status.get("audio_available", True):
             self.display.draw_text(140, 90, "Audio OFF", font_size="small")
 
@@ -102,14 +163,19 @@ class UIManager:
                 self.current_menu_index = 0
         elif action == "LEFT":
             if self.state == config.STATE_PLAYING:
-                self.audio.prev_song()
+                self.audio.prev_song(shuffle=self.settings.get("Shuffle", False))
             else:
                 self.audio.set_volume(self.audio.volume - 0.1)
+                self._persist_settings()
         elif action == "RIGHT":
             if self.state == config.STATE_PLAYING:
-                self.audio.next_song()
+                if self.settings.get("Shuffle", False):
+                    self.audio.next_song(shuffle=True, use_forward_history=True)
+                else:
+                    self.audio.next_song(shuffle=False)
             else:
                 self.audio.set_volume(self.audio.volume + 0.1)
+                self._persist_settings()
         elif action == "A":
             self._handle_select()
         elif action == "B":
@@ -153,6 +219,7 @@ class UIManager:
                     song = self.music_list[self.current_menu_index]
                     if self.audio.load_music(os.path.join(config.MUSIC_DIR, song)):
                         self.audio.play()
+                        self._persist_settings()
                         self.state = config.STATE_PLAYING
                         self.draw(full_refresh=True)
             elif self.sub_menu_type == "SETTINGS":
@@ -161,6 +228,7 @@ class UIManager:
                     self.settings[key] = "Bluetooth" if self.settings[key] == "3.5mm Jack" else "3.5mm Jack"
                 else:
                     self.settings[key] = not self.settings[key]
+                self._persist_settings()
                 self.draw()
         elif self.state == config.STATE_PLAYING:
             self.audio.pause_resume()
@@ -178,5 +246,11 @@ class UIManager:
 
     def handle_song_finished(self):
         if self.state == config.STATE_PLAYING:
-            self.audio.next_song()
+            if self.settings.get("Repeat", False):
+                self.audio.replay_current()
+            elif self.settings.get("Shuffle", False):
+                self.audio.next_song(shuffle=True, use_forward_history=False)
+            else:
+                self.audio.next_song(shuffle=False)
+            self._persist_settings()
             self.draw()

@@ -11,6 +11,7 @@ EPD_HEIGHT = 122
 ASSETS_DIR = os.path.join(PROJECT_ROOT, 'assets')
 FONTS_DIR = os.path.join(ASSETS_DIR, 'fonts')
 MUSIC_DIR = os.path.join(PROJECT_ROOT, 'music')
+SETTINGS_FILE = os.path.join(PROJECT_ROOT, 'settings.json')
 
 # Default Font (may need to be adjusted based on system availability)
 DEFAULT_FONT = os.path.join(FONTS_DIR, 'PixelOperator.ttf')
@@ -32,6 +33,10 @@ BUTTON_START = 315
 # D-Pad (Hat events or specific codes depending on mode)
 ABS_HAT0X = 16
 ABS_HAT0Y = 17
+
+# Web control server settings
+WEB_HOST = "0.0.0.0"
+WEB_PORT = 8080
 
 # Application States
 STATE_MENU = "MENU"
